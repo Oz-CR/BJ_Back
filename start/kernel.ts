@@ -10,12 +10,18 @@
 
 import router from '@adonisjs/core/services/router'
 import server from '@adonisjs/core/services/server'
+import { connectMongo } from './mongo.js'
 
 /**
  * The error handler is used to convert an exception
  * to an HTTP response.
  */
 server.errorHandler(() => import('#exceptions/handler'))
+
+await connectMongo().catch((error) => {
+  console.error("Failed connection to mongo: ", error)
+  process.exit(1)
+})
 
 /**
  * The server middleware stack runs middleware on all the HTTP
