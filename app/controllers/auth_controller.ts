@@ -30,7 +30,9 @@ export default class AuthController {
                 message: 'Registered successfully',
                 data: {
                     user: user,
-                    token: token
+                    token: {
+                        value: token!.value?.release()
+                    }
                 }
             })
         } catch(error) {
@@ -54,7 +56,9 @@ export default class AuthController {
                 message: 'Login successful',
                 data: {
                     user: user,
-                    token: token.value
+                    token: {
+                        value: token!.value?.release()
+                    }
                 }
             })
         } catch (error) {

@@ -1,3 +1,4 @@
+import { Games } from "#models/game"
 import { createServer } from "node:http"
 import { Server as WebSocketServer } from "socket.io"
 
@@ -16,6 +17,11 @@ io.on("connection", (socket) => {
     socket.on("join", (game_id: string) => {
         socket.join(game_id)
         console.log(`Client ${socket.id} joined game ${game_id}`)
+    })
+
+    socket.on("find_available_games", async() => {
+        const games = await Games.find({is_active: true, is_ended: false})
+        socket.emit("available_games", games)
     })
 
     socket.on("disconnect", () => {
