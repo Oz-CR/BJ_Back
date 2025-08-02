@@ -16,10 +16,13 @@ router.get('/', async () => {
   }
 })
 
-router.group(() => {
-  router.post('/register', '#controllers/auth_controller.register')
-  router.post('/login', '#controllers/auth_controller.login')
-  router.post('/validate-token', '#controllers/auth_controller.validateToken')
-}).prefix('/api/auth')
+router
+  .group(() => {
+    router.post('/register', '#controllers/auth_controller.register')
+    router.post('/login', '#controllers/auth_controller.login')
+    router.post('/validate-token', '#controllers/auth_controller.validateToken')
+  })
+  .prefix('/api/auth')
 
 router.post('/api/auth/logout', '#controllers/auth_controller.logout').use([middleware.auth()])
+router.post('/create-game', '#controllers/games_controller.createGame').use([middleware.auth()])
