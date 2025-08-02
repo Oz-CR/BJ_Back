@@ -9,6 +9,9 @@ export async function connectMongo() {
     try {
         await mongoose.connect(mongo_url)
 
+        const collections = await mongoose.connection.db?.listCollections().toArray()
+        console.log('Collections: ', collections?.map(c => c.name))
+
         console.log('Connected to MongoDB');
     } catch (error) {
         console.error('Error connecting to MongoDB:', error);

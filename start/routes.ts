@@ -9,6 +9,9 @@
 
 import router from '@adonisjs/core/services/router'
 import { middleware } from './kernel.js'
+import GamesController from '#controllers/games_controller'
+import AuthController from '#controllers/auth_controller'
+import PlayerPacksController from '#controllers/player_packs_controller'
 
 router.get('/', async () => {
   return {
@@ -17,9 +20,26 @@ router.get('/', async () => {
 })
 
 router.group(() => {
-  router.post('/register', '#controllers/auth_controller.register')
-  router.post('/login', '#controllers/auth_controller.login')
-  router.post('/validate-token', '#controllers/auth_controller.validateToken')
+  router.post('/register', [AuthController, 'register'])
+  router.post('/login', [AuthController, 'login'])
+  router.post('/validate-token', [AuthController, 'validateToken'])
 }).prefix('/api/auth')
 
-router.post('/api/auth/logout', '#controllers/auth_controller.logout').use([middleware.auth()])
+router.post('/api/auth/logout', [AuthController, 'logout']).use([middleware.auth()])
+
+router.group(() => {
+  router.post('/create-game', [GamesController, 'createGame'])
+  router.get('/pack/:id', [GamesController, 'viewPack'])
+  router.post('/join/:id', [GamesController, 'joinGame'])
+  router.post('/start/:id', [GamesController, 'startGame'])
+  router.post('/restart/:id', [GamesController, 'restartGame'])
+  router.get('/get/:id', [GamesController, 'getGame'])
+}).prefix('/api/games').use([middleware.auth()])
+
+router.group(() => {
+  router.post('/hit/:id', [PlayerPacksController, 'hitMe'])
+  router.post('/ready/:id', [PlayerPacksController, 'readySelf'])
+  router.post('/finish/:id', [PlayerPacksController, 'endTurn'])
+  router.post('/blackjack/:id', [PlayerPacksController, 'blackJack'])
+  router.get('/my-pack', [PlayerPacksController, 'myCardsPack'])
+}).prefix('/api/packs').use([middleware.auth()])
