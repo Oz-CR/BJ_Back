@@ -96,7 +96,7 @@ const startGame = async(gameId: string): Promise<GamesP> => {
 export default class GamesController {
     async viewDeck({params, response}: HttpContext) {
         const game_id = params.id;
-        const game = await Games.findById(game_id).populate('deck');
+        const game = await Games.findById(game_id).populate('pack');
 
         if (!game) {
           return response.notFound({
@@ -202,6 +202,9 @@ export default class GamesController {
         const user = await auth.use('api').authenticate()
         const cards = await reshufflePack();
 
+        const testCards = await Cards.find({})
+        console.log('Cartas obtenidas: ', cards.length, testCards.length)
+
         if (cards.length !== 52) {
           return response.badRequest({
             message: 'Deck must contain exactly 52 cards'
@@ -230,7 +233,7 @@ export default class GamesController {
 
         await playerPack.save();
 
-        const gameCreated = await Games.findById(game._id).populate('deck');
+        const gameCreated = await Games.findById(game._id).populate('pack');
 
         if (!gameCreated) {
           return response.internalServerError({
@@ -353,7 +356,7 @@ export default class GamesController {
             });
         }
 
-        const playerPacks = await PlayerPacks.find({ game_id: game._id }).populate('deck');
+        const playerPacks = await PlayerPacks.find({ game_id: game._id }).populate('pack');
         for (const playerPack of playerPacks) {
             if (!playerPack.is_ready) {
                 return response.badRequest({
@@ -483,7 +486,7 @@ export default class GamesController {
             });
         }
 
-        const playerPacks = await PlayerPacks.find({ game_id: game._id }).populate('deck');
+        const playerPacks = await PlayerPacks.find({ game_id: game._id }).populate('pack');
         for (const playerPack of playerPacks) {
         if (!playerPack.is_ready) {
             return response.badRequest({
