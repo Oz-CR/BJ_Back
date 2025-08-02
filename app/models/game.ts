@@ -8,6 +8,6 @@ const gamesSchema = new mongoose.Schema({
   player_ids: [Number],
   turn: Number,
   winner_id: Number,
-})
+}, { collection: "Games" })
 
 export const Games = mongoose.model("Games", gamesSchema)

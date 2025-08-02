@@ -7,6 +7,6 @@ const playerPacksSchema = new mongoose.Schema({
   count: { type: Number, default: 0 },
   total_value: { type: Number, default: 0 },
   is_ready: Boolean
-})
+}, { collection: "PlayerPacks" })
 
 export const PlayerPacks = mongoose.model("PlayerPacks", playerPacksSchema)
