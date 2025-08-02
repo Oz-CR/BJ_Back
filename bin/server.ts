@@ -33,6 +33,11 @@ new Ignitor(APP_ROOT, { importer: IMPORTER })
   .tap((app) => {
     app.booting(async () => {
       await import('#start/env')
+      // Conectar a MongoDB
+      const { connectMongo } = await import('#start/mongo')
+      await connectMongo()
+      // Iniciar el servidor WebSocket
+      await import('#start/websocket')
     })
     app.listen('SIGTERM', () => app.terminate())
     app.listenIf(app.managedByPm2, 'SIGINT', () => app.terminate())

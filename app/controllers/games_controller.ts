@@ -198,8 +198,16 @@ export default class GamesController {
         }
     }
 
-    async createGame({auth, response}: HttpContext) {
+    async createGame({auth, response, request}: HttpContext) {
         const user = await auth.use('api').authenticate()
+        const { name } = request.only(['name'])
+        
+        if (!name || !name.trim()) {
+          return response.badRequest({
+            message: 'Game name is required'
+          });
+        }
+        
         const cards = await reshufflePack();
 
         const testCards = await Cards.find({})
@@ -212,10 +220,12 @@ export default class GamesController {
         }
 
         const game = new Games({
+          name: name.trim(),
           owner_id: user.id,
           pack: cards.map(card => card._id),
           player_ids: [user.id],
           is_active: false,
+          is_ended: false,
           turn: 0,
           winner_id: null,
         })
@@ -246,6 +256,9 @@ export default class GamesController {
           ...gameCreated.toObject(),
           players: playersData
         }
+        
+        // Notificar a todos los clientes conectados que hay un nuevo juego
+        io.emit('game_list_updated');
 
         return response.created({
           message: 'Game created successfully',

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const gamesSchema = new mongoose.Schema({
+  name: String,
   owner_id: Number,
   pack: [{ type: mongoose.Schema.Types.ObjectId, ref: "Cards" }],
   is_active: Boolean,
