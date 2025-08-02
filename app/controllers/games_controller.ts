@@ -94,7 +94,7 @@ const startGame = async(gameId: string): Promise<GamesP> => {
 }
 
 export default class GamesController {
-    async viewDeck({params, response}: HttpContext) {
+    async viewPack({params, response}: HttpContext) {
         const game_id = params.id;
         const game = await Games.findById(game_id).populate('pack');
 

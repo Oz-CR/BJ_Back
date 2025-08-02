@@ -9,6 +9,9 @@
 
 import router from '@adonisjs/core/services/router'
 import { middleware } from './kernel.js'
+import GamesController from '#controllers/games_controller'
+import AuthController from '#controllers/auth_controller'
+import PlayerPacksController from '#controllers/player_packs_controller'
 
 router.get('/', async () => {
   return {

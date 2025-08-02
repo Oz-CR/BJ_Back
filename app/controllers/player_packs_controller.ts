@@ -163,7 +163,7 @@ export default class PlayerPacksController {
         });
     }
 
-    async terminarTurno({auth, response, params}: HttpContext) {
+    async endTurn({auth, response, params}: HttpContext) {
         const user = await auth.use('api').authenticate();
         const game = await Games.findById(params.id);
         if (!game) {
