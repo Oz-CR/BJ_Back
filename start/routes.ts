@@ -27,5 +27,10 @@ router
   })
   .prefix('/api/auth')
 
+router.get('/api/auth/me', '#controllers/auth_controller.me').use([middleware.auth()])
 router.post('/api/auth/logout', '#controllers/auth_controller.logout').use([middleware.auth()])
 router.post('/create-game', '#controllers/games_controller.createGame').use([middleware.auth()])
+router.get('/games/:id', '#controllers/games_controller.getGame').use([middleware.auth()])
+router.post('/games/:id/join', '#controllers/games_controller.joinGame').use([middleware.auth()])
+router.post('/games/:id/start', '#controllers/games_controller.startGame').use([middleware.auth()])
+router.post('/games/:id/leave', '#controllers/games_controller.leaveGame').use([middleware.auth()])

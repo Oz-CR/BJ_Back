@@ -19,6 +19,17 @@ io.on('connection', (socket) => {
     console.log(`Client ${socket.id} joined game ${game_id}`)
   })
 
+  // Nuevo manejo específico para salas de juego
+  socket.on('join_game_room', ({ gameId }) => {
+    socket.join(`game:${gameId}`)
+    console.log(`Client ${socket.id} joined game room ${gameId}`)
+  })
+
+  socket.on('leave_game_room', ({ gameId }) => {
+    socket.leave(`game:${gameId}`)
+    console.log(`Client ${socket.id} left game room ${gameId}`)
+  })
+
   socket.on('find_available_games', async () => {
     try {
       // Primero buscar todos los juegos para debug

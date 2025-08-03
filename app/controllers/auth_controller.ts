@@ -106,4 +106,22 @@ export default class AuthController {
             })
         }
     }
+
+    async me({response, auth}: HttpContext) {
+        try {
+            const user = await auth.use('api').authenticate()
+            
+            return response.status(200).json({
+                message: 'User data retrieved successfully',
+                data: {
+                    user: user
+                }
+            })
+        } catch (error) {
+            return response.status(401).json({
+                message: 'Unauthorized',
+                error: 'INVALID_TOKEN'
+            })
+        }
+    }
 }

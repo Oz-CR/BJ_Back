@@ -238,7 +238,7 @@ export default class GamesController {
           pack: [],
           count: 0,
           total_value: 0,
-          is_ready: false
+          is_ready: true
         })
 
         await playerPack.save();
@@ -308,7 +308,9 @@ export default class GamesController {
         player_id: user.id,
         game_id: game._id,
         pack: [],
-        count: 0
+        count: 0,
+        total_value: 0,
+        is_ready: true
         });
 
         await playerPack.save();
@@ -437,11 +439,12 @@ export default class GamesController {
             });
         }
 
-        if (!game.is_active) {
-            return response.badRequest({
-                message: 'Game is not active'
-            });
-        }
+        // Permitir salir tanto en juegos activos como en sala de espera
+        // if (!game.is_active) {
+        //     return response.badRequest({
+        //         message: 'Game is not active'
+        //     });
+        // }
 
         if (!game.player_ids.includes(user.id)) {
             return response.badRequest({
@@ -450,19 +453,37 @@ export default class GamesController {
         }
 
         const playerIsOwner = game.owner_id === user.id;
+        
+        // Eliminar al jugador de la lista
+        game.player_ids = game.player_ids.filter(player_id => player_id !== user.id);
+        
         if (playerIsOwner) {
+            // Si el anfitrión se sale, terminar el juego y notificar a todos
             game.set({ is_ended: true });
             await game.save();
+            
+            // Notificar a todos los jugadores que el anfitrión se fue y el juego terminó
+            io.to(`game:${game._id}`).emit('host_left', { 
+                game: game._id,
+                message: 'El anfitrión ha abandonado la partida. La partida ha terminado.'
+            });
+            
+            // Eliminar todos los PlayerPacks del juego
+            await PlayerPacks.deleteMany({ game_id: game._id });
+        } else {
+            // Si es un jugador normal, solo actualizar el juego
+            game.is_active = false;
+            await game.save();
+            
+            // Notificar a los demás jugadores que alguien se fue
+            io.to(`game:${game._id}`).emit('player_left', { 
+                game: game._id, 
+                player_id: user.id 
+            });
+            
+            // Solo eliminar el PlayerPack del jugador que se fue
+            await PlayerPacks.deleteMany({ player_id: user.id, game_id: game._id });
         }
-
-
-        game.player_ids = game.player_ids.filter(player_id => player_id !== user.id);
-        game.is_active = false;
-        await game.save();
-
-        io.to(`game:${game._id}`).emit('gameNotify', { game: game._id });
-
-        await PlayerPacks.deleteMany({ player_id: user.id, game_id: game._id });
             return response.ok({
             message: 'Left game successfully',
             data: game
