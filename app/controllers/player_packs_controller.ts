@@ -5,6 +5,30 @@ import { Cards } from '#models/card'
 import { io } from '#start/websocket'
 
 export default class PlayerPacksController {
+    
+    // Método para calcular el valor de una mano considerando los Ases
+    private calculateHandValue(cards: any[]): number {
+        let totalValue = 0
+        let aces = 0
+        
+        // Contar el valor básico y los ases
+        for (const card of cards) {
+            if (card.rank === 'A') {
+                aces++
+                totalValue += 11 // Inicialmente contar como 11
+            } else {
+                totalValue += card.value || 0
+            }
+        }
+        
+        // Ajustar los ases si es necesario
+        while (totalValue > 21 && aces > 0) {
+            totalValue -= 10 // Cambiar un As de 11 a 1
+            aces--
+        }
+        
+        return totalValue
+    }
     async myCardsPack({auth, params, response}: HttpContext) {
         const user = await auth.use('api').authenticate()
         const playerPack = await PlayerPacks.findOne({player_id: user.id, game_id: params.id}).populate('pack')
@@ -14,8 +38,20 @@ export default class PlayerPacksController {
             })
         }
 
+        // Recalcular el valor total basado en las cartas actuales
+        const cards = await Cards.find({ _id: { $in: playerPack.pack } })
+        const totalValue = this.calculateHandValue(cards)
+        
+        // Actualizar el valor en la base de datos si es diferente
+        if (playerPack.total_value !== totalValue) {
+            playerPack.total_value = totalValue
+            await playerPack.save()
+        }
+
         const playerPackWithData = {
             ...playerPack.toObject(),
+            pack: cards, // Enviar las cartas completas con valores
+            total_value: totalValue,
             player: user
         }
 
@@ -90,15 +126,22 @@ export default class PlayerPacksController {
                 game.turn = 0
 
                 const playersPacks = await PlayerPacks.find({ game_id: game._id })
-                const totalValues = playersPacks.map(pack => pack.total_value)
-                const maxValue = Math.max(...totalValues)
-
-                game.winner_id = playersPacks.find(pack => pack.total_value === maxValue)?.player_id ?? null
+                const validValues = playersPacks.map(pack => pack.total_value).filter(value => value > 0 && value <= 21)
+                
+                if (validValues.length === 0) {
+                    // Todos se pasaron, nadie gana
+                    game.winner_id = null
+                } else {
+                    const maxValue = Math.max(...validValues)
+                    game.winner_id = playersPacks.find(pack => pack.total_value === maxValue)?.player_id ?? null
+                }
+                
+                game.is_ended = true
 
                 await playerPack.save()
                 await game.save()
 
-                io.to(`Game: ${game._id}`).emit('gameNotification', {game: game._id})
+                io.to(`game:${game._id}`).emit('gameNotify', {game: game._id})
 
                 return response.ok({
                     message: 'Game ended',
@@ -113,7 +156,7 @@ export default class PlayerPacksController {
         await playerPack.save()
         await game.save()
 
-        io.to(`Game: ${game._id}`).emit('gameNotification', {game: game._id})
+        io.to(`game:${game._id}`).emit('gameNotify', {game: game._id})
         
         return response.ok({
             message: 'Successful hit',
@@ -155,7 +198,7 @@ export default class PlayerPacksController {
         playerDeck.is_ready = true;
 
         await playerDeck.save();
-        io.to(`game:${game._id}`).emit('gameNotification', { game: game._id });
+        io.to(`game:${game._id}`).emit('gameNotify', { game: game._id });
         
         return response.ok({
             message: 'Player is now ready',
@@ -189,14 +232,22 @@ export default class PlayerPacksController {
 
         if (game.turn > gamePlayers.length - 1) {
             game.turn = 0;
-            const playersDecks = await PlayerPacks.find({ game_d: game._id })
-            const totalValues = playersDecks.map(deck => deck.total_value)
-            const maxValue = Math.max(...totalValues)
-            game.winner_id = playersDecks.find(deck => deck.total_value === maxValue)?.player_id ?? null
+            const playersDecks = await PlayerPacks.find({ game_id: game._id })
+            const validValues = playersDecks.map(deck => deck.total_value).filter(value => value > 0 && value <= 21)
+            
+            if (validValues.length === 0) {
+                // Todos se pasaron, nadie gana
+                game.winner_id = null
+            } else {
+                const maxValue = Math.max(...validValues)
+                game.winner_id = playersDecks.find(deck => deck.total_value === maxValue)?.player_id ?? null
+            }
+            
+            game.is_ended = true
 
             await game.save();
 
-            io.to(`Game: ${game._id}`).emit('gameNotification', { game: game._id });
+            io.to(`game:${game._id}`).emit('gameNotify', { game: game._id });
 
             return response.ok({
                 message: 'Game finished',
@@ -212,7 +263,7 @@ export default class PlayerPacksController {
 
         await game.save();
 
-        io.to(`Game: ${game._id}`).emit('gameNotification', { game: game._id });
+        io.to(`game:${game._id}`).emit('gameNotify', { game: game._id });
 
         return response.ok({
             message: 'Turn ended successfully',
@@ -263,7 +314,7 @@ export default class PlayerPacksController {
 
             await game.save();
 
-            io.to(`Game: ${game._id}`).emit('gameNotification', { game: game._id });
+            io.to(`game:${game._id}`).emit('gameNotify', { game: game._id });
             
             return response.ok({
                 message: 'Blackjack! You win!',
