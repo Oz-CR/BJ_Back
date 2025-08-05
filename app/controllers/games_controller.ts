@@ -502,7 +502,7 @@ export default class GamesController {
             });
         }
 
-        if (game.winner_id === null) {
+        if (!game.is_ended || game.winner_id === undefined) {
             return response.badRequest({
                 message: 'Game is not finished yet'
             });
@@ -520,27 +520,53 @@ export default class GamesController {
             });
         }
 
-        const playerPacks = await PlayerPacks.find({ game_id: game._id }).populate('pack');
-        for (const playerPack of playerPacks) {
-        if (!playerPack.is_ready) {
-            return response.badRequest({
-            message: 'All players must be ready to start the game'
-            });
-        }
-        }
-
         try {
-            const gameRestarted = await startGame(game_id);
-            if (!gameRestarted) {
-                return response.internalServerError({
-                    message: 'Error restarting game'
-                });
+            // Resetear el estado del juego manteniendo los mismos jugadores
+            const shuffled_pack = await reshufflePack();
+            if (shuffled_pack.length < 52) {
+                throw new Error('Deck must have 52 cards');
             }
+
+            // Actualizar el juego con nuevo estado
+            game.pack = shuffled_pack.map(card => card._id);
+            game.is_active = false;  // Empezar inactivo para que los jugadores se preparen
+            game.is_ended = false;
+            game.turn = 0;
+            game.winner_id = null;
+
+            // Resetear todos los PlayerPacks manteniendo los jugadores
+            const playerPacks = await PlayerPacks.find({ game_id: game._id });
+            for (const playerPack of playerPacks) {
+                playerPack.pack = [];
+                playerPack.count = 0;
+                playerPack.total_value = 0;
+                playerPack.is_ready = false;  // Los jugadores deben prepararse de nuevo
+                await playerPack.save();
+            }
+
+            await game.save();
+
+            // Obtener datos actualizados para respuesta
+            const gameRestarted = await Games.findById(game._id).populate('pack');
+            const playersData = await User.query().whereIn('id', game.player_ids);
+            const gameWithData = {
+                ...gameRestarted.toObject(),
+                players: playersData
+            };
+
+            // Notificar a todos los jugadores que el juego se ha reiniciado
+            io.to(`game:${game._id}`).emit('game_restarted', { 
+                game: game._id,
+                message: 'El juego ha sido reiniciado. Prepárense para la nueva partida.' 
+            });
             io.to(`game:${game._id}`).emit('gameNotify', { game: game._id });
 
             return response.ok({
-                message: 'Game restarted successfully',
-                data: gameRestarted
+                message: 'Game restarted successfully. Players need to get ready.',
+                data: {
+                    game: gameWithData,
+                    playersPacks: playerPacks
+                }
             });
         } catch (error) {
             return response.internalServerError({
